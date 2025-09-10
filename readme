@@ -1,3 +1,40 @@
 Pipeline for Spectrascopic Benchmarking
 
 Materials: WS2, MoS2, Graphene
+
+SciArena Paper Models:
+1. o3
+2. Claude-4-Opus
+3. Gemini-2.5-Pro
+4. Deepseek-R1-0528
+5. o4-mini
+6. Claude-4-Sonnet
+7. GPT-4.1
+8. Gemini-2.5-Pro-Previ
+9. Qwen3-235B-A22B
+10. GPT-4.1-mini
+11. Grok-3
+12. Deepseek-R1
+13. Deepseek-V3
+14. Qwen3-32B
+15. QwQ-32B
+16. Gemini-2.5-Flash
+17. Claude-3-7-Sonnet
+18. Gemini-2.5-Flash-Previ
+19. Minimax-M1
+20. Mistral-Small-3.1
+21. Llama-4-Maverick
+22. Mistrl-Medium-3
+23. Llama-4-Scout
+
+
+Current List:
+1. gemini-1.5-pro-latest
+2. gpt-3.5-turbo
+3. gpt-4.1
+4. gpt-4.1-mini
+5. gpt-4o
+6. gemini-2.5-pro
+7. claude opus 4.1
+8. claude sonnet 4
+9. claude haiku 3.
