@@ -54,22 +54,22 @@ def gaussian_smooth_variable(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Variable sigma based on local data density and peak detection"""
     y = np.asarray(y, dtype=np.float64)
     
-    # Use smaller sigma in peak regions, larger in baseline regions
+
     baseline_threshold = 0.1 * np.max(y)
     
-    # Create variable sigma array
+
     sigma_array = np.where(y > baseline_threshold, 0.8, 2.0)
     
-    # Apply smoothing with variable kernel (approximation)
+
     result = np.zeros_like(y)
     for i in range(len(y)):
         local_sigma = sigma_array[i]
-        # Create local window
+
         window_size = int(6 * local_sigma)
         start_idx = max(0, i - window_size)
         end_idx = min(len(y), i + window_size + 1)
         
-        # Apply local Gaussian
+
         local_y = y[start_idx:end_idx]
         local_smooth = gaussian_filter1d(local_y, local_sigma)
         result[i] = local_smooth[i - start_idx] if i - start_idx < len(local_smooth) else y[i]
@@ -80,7 +80,7 @@ def savitzky_golay_custom(y: np.ndarray, window_length: int = 15, polyorder: int
     """Custom Savitzky-Golay filter as alternative to Gaussian"""
     y = np.asarray(y, dtype=np.float64)
     
-    # Ensure window_length is odd and valid
+
     if window_length % 2 == 0:
         window_length += 1
     if window_length >= len(y):
@@ -92,18 +92,18 @@ def moving_average_weighted(y: np.ndarray, window_size: int = 5) -> np.ndarray:
     """Weighted moving average that preserves peaks better than Gaussian"""
     y = np.asarray(y, dtype=np.float64)
     
-    # Create triangular weights (more weight to center)
+
     weights = np.bartlett(window_size)
     weights = weights / weights.sum()
     
-    # Pad the signal
+
     pad_width = window_size // 2
     y_padded = np.pad(y, pad_width, mode='edge')
     
-    # Apply weighted moving average
+
     result = np.convolve(y_padded, weights, mode='same')
     
-    # Remove padding
+
     return result[pad_width:-pad_width]
 
 def detect_peaks_improved(x: np.ndarray, y: np.ndarray, method: str = "adaptive") -> list[dict]:
@@ -111,22 +111,21 @@ def detect_peaks_improved(x: np.ndarray, y: np.ndarray, method: str = "adaptive"
     x = np.asarray(x, dtype=np.float64)
     y = np.asarray(y, dtype=np.float64)
     
-    # Use adaptive prominence based on local noise level
+
     if method == "adaptive":
-        # Calculate local noise level
+
         noise_level = np.std(y[y < 0.1 * np.max(y)])
         min_prominence = max(0.02 * y.max(), 3 * noise_level)
     else:
         min_prominence = 0.05 * y.max()
     
-    # Multiple detection passes with different parameters
+
     idx, props = find_peaks(y, 
                           prominence=min_prominence,
-                          distance=5,  # Minimum distance between peaks
-                          height=0.01 * y.max())  # Minimum height
+                          distance=5, 
+                          height=0.01 * y.max()) 
     
     if len(idx) == 0:
-        # If no peaks found, try with more relaxed criteria
         idx, props = find_peaks(y, prominence=0.01 * y.max())
     
     widths, _, left, right = peak_widths(y, idx, rel_height=0.5)
@@ -134,7 +133,7 @@ def detect_peaks_improved(x: np.ndarray, y: np.ndarray, method: str = "adaptive"
     peaks = []
     
     for i, w, l, r in zip(idx, widths, left, right):
-        # Add peak quality metrics
+
         peak_height = y[i]
         local_background = np.mean([y[max(0, i-10)], y[min(len(y)-1, i+10)]])
         signal_to_noise = peak_height / (local_background + 1e-10)
@@ -149,7 +148,7 @@ def detect_peaks_improved(x: np.ndarray, y: np.ndarray, method: str = "adaptive"
             "signal_to_noise": float(signal_to_noise),
         })
     
-    # Sort by intensity (strongest peaks first)
+
     peaks.sort(key=lambda p: p["intensity"], reverse=True)
     
     return peaks
@@ -166,14 +165,12 @@ def make_comparison_plots(x, y_raw, y_sg, smoothing_results, peaks_dict):
     methods = list(smoothing_results.keys())
     colors = ['green', 'purple', 'red', 'brown']
     
-    # Plot 1: All smoothing methods comparison
     axes[0,0].plot(x, y_raw, label="Raw", alpha=0.3, linewidth=2, color='lightblue')
     axes[0,0].plot(x, y_sg, label="Original SG", color="orange", linewidth=2)
     
     for i, (method, y_smooth) in enumerate(smoothing_results.items()):
         axes[0,0].plot(x, y_smooth, label=method, color=colors[i], linewidth=2)
         
-        # Add peaks for this method
         if method in peaks_dict:
             peaks = peaks_dict[method]
             p_x = [p["position"] for p in peaks]
@@ -186,7 +183,6 @@ def make_comparison_plots(x, y_raw, y_sg, smoothing_results, peaks_dict):
     axes[0,0].legend()
     axes[0,0].grid(True, alpha=0.3)
     
-    # Plot 2: Focus on main peak region (350-450 cm⁻¹)
     main_peak_mask = (x >= 350) & (x <= 450)
     axes[0,1].plot(x[main_peak_mask], y_raw[main_peak_mask], alpha=0.3, linewidth=3, color='lightblue', label="Raw")
     axes[0,1].plot(x[main_peak_mask], y_sg[main_peak_mask], color="orange", linewidth=2, label="Original SG")
@@ -194,7 +190,6 @@ def make_comparison_plots(x, y_raw, y_sg, smoothing_results, peaks_dict):
     for i, (method, y_smooth) in enumerate(smoothing_results.items()):
         axes[0,1].plot(x[main_peak_mask], y_smooth[main_peak_mask], color=colors[i], linewidth=2, label=method)
         
-        # Add peaks in this region
         if method in peaks_dict:
             peaks = peaks_dict[method]
             region_peaks_x = [p["position"] for p in peaks if 350 <= p["position"] <= 450]
@@ -207,8 +202,8 @@ def make_comparison_plots(x, y_raw, y_sg, smoothing_results, peaks_dict):
     axes[0,1].legend()
     axes[0,1].grid(True, alpha=0.3)
     
-    # Plot 3: Best method detailed view
-    best_method = list(smoothing_results.keys())[0]  # You can change this logic
+
+    best_method = list(smoothing_results.keys())[0]
     y_best = smoothing_results[best_method]
     best_peaks = peaks_dict.get(best_method, [])
     
@@ -220,8 +215,8 @@ def make_comparison_plots(x, y_raw, y_sg, smoothing_results, peaks_dict):
         p_int = [p["intensity"] for p in best_peaks]
         axes[1,0].scatter(p_x, p_int, marker="o", color="red", zorder=3, s=60, label="Detected Peaks")
         
-        # Annotate peaks with positions
-        for px, py in zip(p_x[:5], p_int[:5]):  # Annotate top 5 peaks
+
+        for px, py in zip(p_x[:5], p_int[:5]):
             axes[1,0].annotate(f'{px:.0f}', (px, py), 
                              xytext=(5, 5), textcoords='offset points', 
                              fontsize=8, alpha=0.8)
@@ -232,7 +227,6 @@ def make_comparison_plots(x, y_raw, y_sg, smoothing_results, peaks_dict):
     axes[1,0].legend()
     axes[1,0].grid(True, alpha=0.3)
     
-    # Plot 4: Peak statistics
     if peaks_dict:
         methods_list = list(peaks_dict.keys())
         peak_counts = [len(peaks_dict[method]) for method in methods_list]
@@ -242,7 +236,7 @@ def make_comparison_plots(x, y_raw, y_sg, smoothing_results, peaks_dict):
         axes[1,1].set_ylabel("Peak Count")
         axes[1,1].tick_params(axis='x', rotation=45)
         
-        # Add value labels on bars
+
         for bar, count in zip(bars, peak_counts):
             axes[1,1].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
                           str(count), ha='center', va='bottom')
@@ -263,7 +257,6 @@ def main():
         print(f"  Data range: {x.min():.1f} - {x.max():.1f} cm⁻¹")
         print(f"  Raw intensity range: {y_raw.min():.3f} - {y_raw.max():.3f}")
         
-        # Test multiple smoothing approaches
         smoothing_results = {
             "Gentle Gaussian (σ=1.0)": gaussian_smooth_adaptive(y_raw, sigma=1.0),
             "Variable Gaussian": gaussian_smooth_variable(x, y_raw),
@@ -271,24 +264,20 @@ def main():
             "Weighted Moving Avg": moving_average_weighted(y_raw, window_size=7)
         }
         
-        # Detect peaks for each method
         peaks_dict = {}
         for method, y_smooth in smoothing_results.items():
             peaks = detect_peaks_improved(x, y_smooth, method="adaptive")
             peaks_dict[method] = peaks
             print(f"{method}: Found {len(peaks)} peaks")
         
-        # Save the gentle gaussian results as requested
         best_method = "Gentle Gaussian (σ=1.0)"
         best_peaks = peaks_dict[best_method]
         save_json(best_peaks)
         print(f"Best peaks ({best_method}) saved to {PEAKS_JSON}")
         
-        # Create comprehensive comparison plots
         make_comparison_plots(x, y_raw, y_sg, smoothing_results, peaks_dict)
         print(f"Comparison plots saved to {PNG_FILE}")
         
-        # Print peak summary for best method
         print(f"\nTop peaks using {best_method}:")
         for i, peak in enumerate(best_peaks[:5]):
             print(f"  {i+1}. {peak['position']:.1f} cm⁻¹ (intensity: {peak['intensity']:.3f}, "

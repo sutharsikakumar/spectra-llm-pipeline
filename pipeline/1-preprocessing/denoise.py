@@ -14,18 +14,18 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from io import StringIO
 
-# ─────────── configuration ─────────── #
+
 DATA_PATH   = Path("data/mos2_data.txt")
 OUTPUT_DIR  = Path("results/mos2")
 PNG_FILE    = OUTPUT_DIR / "denoised_spectra_mos2.png"
 CSV_FILE    = OUTPUT_DIR / "mos2_denoised.csv"
 
-WN_MIN, WN_MAX = 200, 1400           # full range to plot
-ZOOM_RANGE     = (350, 450)          # MoS₂ E12g / A1g region
-WINDOW_SIZE    = 5                   # SG filter params
+WN_MIN, WN_MAX = 200, 1400         
+ZOOM_RANGE     = (350, 450)  
+WINDOW_SIZE    = 5       
 POLY_ORDER     = 2
 
-# ─────────── helpers ─────────── #
+
 def load_spectrum(path: Path) -> pd.DataFrame:
     txt = path.read_text(encoding="utf-8", errors="ignore")
     return pd.read_csv(
@@ -36,7 +36,7 @@ def load_spectrum(path: Path) -> pd.DataFrame:
         engine="python",
     )
 
-# ─────────── main ─────────── #
+
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -47,14 +47,14 @@ def main() -> None:
         .reset_index(drop=True)
     )
 
-    # denoise
+
     df["Denoised"] = savgol_filter(
         df["Intensity"].to_numpy(), WINDOW_SIZE, POLY_ORDER, mode="nearest"
     )
     df[["Wavenumber", "Denoised"]].to_csv(CSV_FILE, index=False)
     print(f"✅  Denoised data → {CSV_FILE}")
 
-    # ───── plotting style ───── #
+
     plt.rcParams.update({
         "figure.dpi": 100,
         "axes.linewidth": 1.2,
@@ -71,7 +71,7 @@ def main() -> None:
 
     fig, axes = plt.subplots(3, 1, figsize=(8, 10), constrained_layout=True)
 
-    # 1️⃣ Denoised (overlay includes raw for reference)
+
     axes[0].plot(df["Wavenumber"], df["Intensity"],
                  color="#1f77b4", linewidth=1, label="Raw")
     axes[0].plot(df["Wavenumber"], df["Denoised"],
@@ -84,7 +84,7 @@ def main() -> None:
     axes[0].legend(frameon=False)
     axes[0].grid(True)
 
-    # 2️⃣ Raw vs. Denoised (full range overlay)
+
     axes[1].plot(df["Wavenumber"], df["Intensity"],
                  color="#1f77b4", linewidth=1, label="Raw")
     axes[1].plot(df["Wavenumber"], df["Denoised"],
@@ -97,7 +97,7 @@ def main() -> None:
     axes[1].legend(frameon=False)
     axes[1].grid(True)
 
-    # 3️⃣ Zoomed view (overlay)
+
     zoom_df = df.query(f"{ZOOM_RANGE[0]} <= Wavenumber <= {ZOOM_RANGE[1]}")
     axes[2].plot(zoom_df["Wavenumber"], zoom_df["Intensity"],
                  color="#1f77b4", linewidth=1, label="Raw")

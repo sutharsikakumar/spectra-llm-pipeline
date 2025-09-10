@@ -26,7 +26,6 @@ K_FACTOR = 32
 TEMPERATURE = 0.0
 REQUEST_TIMEOUT_S = 60
 
-# Model configurations
 MODEL_CONFIGS = {
     "gpt-4o": {
         "provider": "openai",
@@ -40,7 +39,7 @@ MODEL_CONFIGS = {
     },
     "claude-sonnet-4": {
         "provider": "anthropic",
-        "model_name": "claude-3-5-sonnet-20241022",  # Current available model
+        "model_name": "claude-3-5-sonnet-20241022", 
         "client_class": Anthropic,
     },
     "claude-haiku-3": {
@@ -159,7 +158,7 @@ class MultiModelEvaluator:
             
             print(f"    Raw response: {content[:200]}...")
             
-            # Parse JSON from response
+
             if "```json" in content:
                 json_start = content.find("```json") + 7
                 json_end = content.find("```", json_start)
@@ -175,9 +174,9 @@ class MultiModelEvaluator:
             result = json.loads(content)
             print(f"    Parsed result: {result}")
             
-            # Ensure confidence is present
+
             if "confidence" not in result:
-                result["confidence"] = 0.5  # Default neutral confidence
+                result["confidence"] = 0.5 
                 
             return result
             
@@ -234,7 +233,6 @@ def load_evaluation_data(root: pathlib.Path) -> Dict[str, Dict]:
 
     print(f"Found {len(summary_files)} summary files and {len(peaks_files)} peaks analysis files")
 
-    # Extract model names
     summary_models = set()
     for f in summary_files:
         model_name = extract_model_name_from_summary(f.name)
@@ -253,7 +251,7 @@ def load_evaluation_data(root: pathlib.Path) -> Dict[str, Dict]:
     if len(model_names) < 2:
         raise ValueError(f"Need at least 2 complete models, found {len(model_names)}")
 
-    # Load data
+
     data = {}
     for name in model_names:
         summary_path = graphene_dir / f"summary_{name}.json"
@@ -283,7 +281,6 @@ def run_single_evaluator_benchmark(data: Dict, evaluator_model: str) -> Dict[str
     """Run benchmark with single evaluator model"""
     evaluator = MultiModelEvaluator([evaluator_model])
     
-    # Initialize players
     players = {name: EloPlayer(name) for name in data.keys()}
     
     print(f"\nRunning comparisons with evaluator: {evaluator_model}")
@@ -310,7 +307,6 @@ def run_single_evaluator_benchmark(data: Dict, evaluator_model: str) -> Dict[str
             print(f"  ERROR calling {evaluator_model} for {a} vs {b}: {e}")
             continue
 
-        # Validate result
         if not all(key in result for key in ["winner", "reasoning"]):
             print(f"  ERROR: Missing required keys in result: {result}")
             continue
@@ -319,7 +315,6 @@ def run_single_evaluator_benchmark(data: Dict, evaluator_model: str) -> Dict[str
         reasoning = result["reasoning"]
         confidence = result.get("confidence", 0.5)
         
-        # Update ratings
         if winner == "A":
             old_a_rating = players[a].rating
             old_b_rating = players[b].rating
@@ -349,7 +344,6 @@ def run_single_evaluator_benchmark(data: Dict, evaluator_model: str) -> Dict[str
             print(f"  ERROR: Invalid winner value: '{winner}'")
             continue
 
-        # Store detailed match information
         match_detail = {
             "opponent": b if winner == "A" else a,
             "won": winner == "A" if a in players else winner == "B",
@@ -371,8 +365,7 @@ def calculate_bias_metrics(results: Dict[str, Dict[str, EloPlayer]]) -> Dict:
     """Calculate various bias metrics across evaluators"""
     evaluators = list(results.keys())
     model_names = list(results[evaluators[0]].keys())
-    
-    # Create ranking matrices
+
     rankings = {}
     ratings = {}
     
@@ -384,7 +377,7 @@ def calculate_bias_metrics(results: Dict[str, Dict[str, EloPlayer]]) -> Dict:
         rankings[evaluator] = {model: rank+1 for rank, model in enumerate(sorted_models)}
         ratings[evaluator] = {model: evaluator_results[model].rating for model in model_names}
     
-    # Calculate correlation metrics
+
     bias_metrics = {
         "ranking_correlations": {},
         "rating_correlations": {},
@@ -393,10 +386,10 @@ def calculate_bias_metrics(results: Dict[str, Dict[str, EloPlayer]]) -> Dict:
         "evaluator_agreement": {}
     }
     
-    # Pairwise correlations
+
     for i, eval1 in enumerate(evaluators):
         for eval2 in evaluators[i+1:]:
-            # Ranking correlations
+
             ranks1 = [rankings[eval1][model] for model in model_names]
             ranks2 = [rankings[eval2][model] for model in model_names]
             
@@ -408,14 +401,14 @@ def calculate_bias_metrics(results: Dict[str, Dict[str, EloPlayer]]) -> Dict:
                 "kendall": {"correlation": kendall_corr, "p_value": kendall_p}
             }
             
-            # Rating correlations  
+
             ratings1 = [ratings[eval1][model] for model in model_names]
             ratings2 = [ratings[eval2][model] for model in model_names]
             
             rating_corr = np.corrcoef(ratings1, ratings2)[0, 1]
             bias_metrics["rating_correlations"][f"{eval1}_vs_{eval2}"] = rating_corr
             
-            # Rank disagreement
+
             rank_diff = np.mean([abs(rankings[eval1][model] - rankings[eval2][model]) 
                                for model in model_names])
             bias_metrics["rank_disagreement"][f"{eval1}_vs_{eval2}"] = rank_diff
@@ -430,7 +423,7 @@ def visualize_bias_analysis(results: Dict, bias_metrics: Dict, output_dir: pathl
     evaluators = list(results.keys())
     model_names = list(results[evaluators[0]].keys())
     
-    # 1. Rating comparison plot
+
     plt.figure(figsize=(12, 8))
     
     for i, evaluator in enumerate(evaluators):
@@ -445,7 +438,7 @@ def visualize_bias_analysis(results: Dict, bias_metrics: Dict, output_dir: pathl
     plt.savefig(output_dir / 'elo_ratings_comparison.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 2. Ranking heatmap
+
     ranking_matrix = np.zeros((len(evaluators), len(model_names)))
     for i, evaluator in enumerate(evaluators):
         sorted_models = sorted(results[evaluator].keys(), 
@@ -469,7 +462,7 @@ def visualize_bias_analysis(results: Dict, bias_metrics: Dict, output_dir: pathl
     plt.savefig(output_dir / 'ranking_heatmap.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    # 3. Correlation matrix
+
     corr_data = []
     for comparison, corr_info in bias_metrics["ranking_correlations"].items():
         corr_data.append({
@@ -502,7 +495,7 @@ def save_bias_report(results: Dict, bias_metrics: Dict, output_dir: pathlib.Path
     """Save comprehensive bias analysis report"""
     output_dir.mkdir(exist_ok=True)
     
-    # Save detailed results
+
     detailed_results = {}
     for evaluator, players in results.items():
         detailed_results[evaluator] = {
@@ -519,11 +512,11 @@ def save_bias_report(results: Dict, bias_metrics: Dict, output_dir: pathlib.Path
     with open(output_dir / 'detailed_results.json', 'w') as f:
         json.dump(detailed_results, f, indent=2)
     
-    # Save bias metrics
+
     with open(output_dir / 'bias_metrics.json', 'w') as f:
         json.dump(bias_metrics, f, indent=2)
     
-    # Generate markdown report
+
     report_content = generate_bias_report_markdown(results, bias_metrics)
     with open(output_dir / 'bias_analysis_report.md', 'w') as f:
         f.write(report_content)
@@ -547,7 +540,7 @@ Evaluated on {len(model_names)} candidate models:
 
 """
     
-    # Add ranking table
+
     report += "| Model |"
     for evaluator in evaluators:
         report += f" {evaluator} |"
@@ -566,7 +559,7 @@ Evaluated on {len(model_names)} candidate models:
             report += f" #{rank} ({rating:.1f}) |"
         report += "\n"
     
-    # Add correlation analysis
+
     report += "\n## Bias Analysis\n\n### Ranking Correlations\n\n"
     
     for comparison, corr_info in bias_metrics["ranking_correlations"].items():
@@ -576,17 +569,17 @@ Evaluated on {len(model_names)} candidate models:
         report += f"- Spearman correlation: {spearman:.3f}\n"
         report += f"- Kendall correlation: {kendall:.3f}\n\n"
     
-    # Add interpretation
+
     report += "### Interpretation\n\n"
     avg_spearman = np.mean([corr_info["spearman"]["correlation"] 
                            for corr_info in bias_metrics["ranking_correlations"].values()])
     
     if avg_spearman > 0.8:
-        report += "✅ **Low Bias**: High correlation between evaluators suggests consistent rankings.\n"
+        report += "**Low Bias**: High correlation between evaluators suggests consistent rankings.\n"
     elif avg_spearman > 0.6:
-        report += "⚠️ **Moderate Bias**: Moderate correlation indicates some evaluator disagreement.\n"
+        report += "**Moderate Bias**: Moderate correlation indicates some evaluator disagreement.\n"
     else:
-        report += "❌ **High Bias**: Low correlation suggests significant evaluator disagreement.\n"
+        report += "**High Bias**: Low correlation suggests significant evaluator disagreement.\n"
     
     report += f"\nAverage Spearman correlation: {avg_spearman:.3f}\n"
     
@@ -631,29 +624,29 @@ def main():
             
             results[evaluator] = run_single_evaluator_benchmark(data, evaluator)
             
-            # Print ranking for this evaluator
+
             ranking = sorted(results[evaluator].values(), key=lambda p: p.rating, reverse=True)
             print(f"\n=== RANKING FROM {evaluator.upper()} ===")
             for i, p in enumerate(ranking, 1):
                 mark = "🏆" if i == 1 else "⭐" if i <= 3 else ""
                 print(f"{i:2d}. {p.name:<20} {p.rating:7.1f} ({len(p.wins)}W-{len(p.losses)}L) {mark}")
         
-        # Calculate bias metrics
+
         print(f"\n{'='*50}")
         print("Calculating bias metrics...")
         print(f"{'='*50}")
         
         bias_metrics = calculate_bias_metrics(results)
         
-        # Create visualizations
+
         print("Generating visualizations...")
         visualize_bias_analysis(results, bias_metrics, args.output)
         
-        # Save comprehensive report
+
         print("Saving bias analysis report...")
         save_bias_report(results, bias_metrics, args.output)
         
-        # Print summary
+
         print(f"\n{'='*50}")
         print("BIAS ANALYSIS SUMMARY")
         print(f"{'='*50}")
@@ -664,11 +657,11 @@ def main():
         print(f"Average ranking correlation (Spearman): {avg_spearman:.3f}")
         
         if avg_spearman > 0.8:
-            print("✅ Low bias detected - evaluators show high agreement")
+            print("Low bias detected - evaluators show high agreement")
         elif avg_spearman > 0.6:
-            print("⚠️ Moderate bias detected - evaluators show some disagreement")  
+            print("Moderate bias detected - evaluators show some disagreement")  
         else:
-            print("❌ High bias detected - significant evaluator disagreement")
+            print("High bias detected - significant evaluator disagreement")
             
         print(f"\nDetailed results saved to: {args.output}/")
         print("- bias_analysis_report.md: Main findings")
